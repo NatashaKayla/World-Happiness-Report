@@ -1,0 +1,291 @@
+---
+title: "AoL_DataMining"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document: default
+date: "2024-06-06"
+---
+
+# CALL LIBRARY
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(data.table)
+library(reshape2)
+library(tidyr)
+library(plotly)
+library(leaflet)
+```
+
+## OPEN AND READ FILE
+
+```{r}
+df <- read.csv(file.choose())
+head(df)
+```
+
+## CHANGE CHARACTER TO FACTOR
+
+```{r}
+for(i in colnames(df)){
+  if(is.character(df[[i]])){
+  df[[i]] = as.factor(df[[i]])
+  }
+}
+
+str(df)
+```
+
+# DATA PREPROCESSING
+
+## CHECK IF THERE'S NA OR NOT
+
+```{r}
+sum(is.na(df))
+```
+
+## REMOVE DUPLICATE
+
+```{r}
+df <- df %>% 
+  distinct(.)
+```
+
+# RENAME COLUMN
+
+```{r}
+df <- rename(df, Happiness.score = Ladder.score,
+              Standard.error.of.happiness = Standard.error.of.ladder.score,
+              Life.expectancy = Healthy.life.expectancy,
+              Freedom.of.choices = Freedom.to.make.life.choices)
+
+colnames(df)
+```
+
+# DELETE UNUSED COLUMNS
+
+```{r}
+df <- df %>% 
+  select(-c("Ladder.score.in.Dystopia", "Dystopia...residual", "Explained.by..Log.GDP.per.capita", "Explained.by..Healthy.life.expectancy", "Explained.by..Generosity", "Explained.by..Social.support", "Explained.by..Freedom.to.make.life.choices", "Explained.by..Perceptions.of.corruption", "upperwhisker", "lowerwhisker", "Standard.error.of.happiness"))
+
+colnames(df)
+```
+
+# MAKE NEW DF FOR ASEAN ONLY
+
+```{r}
+asean <- c("Indonesia", "Malaysia", "Philippines", "Singapore", "Thailand", "Brunei Darussalam", "Vietnam", "Laos", "Myanmar", "Cambodia")
+
+df_asean <- df %>% 
+  filter(Country.name %in% asean)
+
+df_asean
+```
+
+# MAKE PERCENTAGE FOR CERTAIN COLUMNS
+
+```{r}
+df_percentage <- df %>% 
+  mutate(
+    Social.support = Social.support * 100,
+    Freedom.of.choices = Freedom.of.choices * 100,
+    Generosity = Generosity * 100,
+    Perceptions.of.corruption = Perceptions.of.corruption * 100
+  )
+
+df_percentage
+```
+
+# HEATMAP
+
+```{r}
+num_data <- df_percentage %>% 
+  select_if(is.numeric) 
+
+corr_matrix <- round(cor(num_data),2)
+ 
+melted_corr_matrix <- melt(corr_matrix)
+head(melted_corr_matrix)
+ 
+heatmap <- ggplot(data = melted_corr_matrix, aes(x = Var1, y = Var2, fill = value, text = paste(Var1, "and", Var2, "<br>Correlation :", value))) +
+  geom_tile() +
+  geom_text(aes(label = value), color = "black", size = 4) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Correlation Heatmap", x = "", y = "") +
+  scale_fill_gradient2(low = c("#56AD6A"), high = c("#269B47"), mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
+                       name="Correlation")
+
+ggplotly(heatmap, tooltip = "text")
+```
+
+Based on this heatmap, if we focus on Happiness Score, we can see that GDP per Capita, Social Support, Life Expectancy, and Freedom of Choices have positive correlation with Happiness Score. But, Perceptions of Corruption have negative correlation with Happiness Score. Generosity and Happiness Score doesn't have correlation because the value is close to 0, which is 0,02. The highest correlation with Happiness Score is GDP per Capita which has a value of 0,79.
+
+# BAR CHART OF HAPPINESS SCORE IN ASEAN
+
+```{r}
+bar_chart <- ggplot(df_asean, aes(x = Country.name, y = Happiness.score)) +
+  geom_col(fill = c("#97CBA1")) +
+  labs(title = "Happiness Score of ASEAN Countries in 2021", x = "Country", y = "Happiness Score") +
+  theme(axis.line.x = element_text(angle = 45, hjust = 1)) +
+  theme_minimal()
+
+ggplotly(bar_chart)
+```
+
+In this bar chart, we can see that Singapore is the country that has a highest happiness score which has value of 6,377. Beside of that, country that has the lowest happiness score in ASEAN is Myanmar that has value of 4,426.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND SOCIAL SUPPORT
+
+```{r}
+lg_1 <- ggplot(df_percentage, aes(x = Happiness.score, y = Social.support)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs Social Support", x = "Happiness Score", y = "Social Support") +
+  theme_minimal()
+
+ggplotly(lg_1)
+```
+
+By this linear reggresion, we can see that Happiness Score and Social Support have positive correlation. It means that, the higher Social Support, the higher Happiness Score in that country.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND GDP PER CAPITA
+
+```{r}
+lg_2 <- ggplot(df_percentage, aes(x = Happiness.score, y = Logged.GDP.per.capita)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs GDP per Capita", x = "Happiness Score", y = "GDP per Capita") +
+  theme_minimal()
+
+ggplotly(lg_2)
+```
+
+By this linear reggresion, we can see that Happiness Score and GDP per Capita have positive correlation. It means that, the higher GDP per Capita, the higher Happiness Score in that country.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND LIFE EXPECTANCY
+
+```{r}
+lg_3 <- ggplot(df_percentage, aes(x = Happiness.score, y = Life.expectancy)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs Life Expectancy", x = "Happiness Score", y = "Life Expectancy") +
+  theme_minimal()
+
+ggplotly(lg_3)
+```
+
+By this linear reggresion, we can see that Happiness Score and Life Expectancy have positive correlation. It means that, the higher Life Expectancy, the higher Happiness Score in that country.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND FREEDOM TO MAKE LIFE CHOICES
+
+```{r}
+lg_4 <- ggplot(df_percentage, aes(x = Happiness.score, y = Freedom.of.choices)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs Freedom to Make Life Choices", x = "Happiness Score", y = "Freedom to Make Life Choices") +
+  theme_minimal()
+
+ggplotly(lg_4)
+```
+
+By this linear reggresion, we can see that Happiness Score and Freedom to Make Life Choices have positive correlation. It means that, the higher Freedom to make Life Choices, the higher Happiness Score in that country.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND GENEROSITY
+
+```{r}
+lg_5 <- ggplot(df_percentage, aes(x = Happiness.score, y = Generosity)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs Generosity", x = "Happiness Score", y = "Generosity") +
+  theme_minimal()
+
+ggplotly(lg_5)
+```
+
+By this linear reggresion, we can see that Happiness Score and Generosity does not have correlation. It means that, Generosity doesn't affect Happiness Score at all.
+
+# LINEAR REGRESSION OF HAPPINESS SCORE AND PERCEPTION OF CORRUPTION
+
+```{r}
+lg_6 <- ggplot(df_percentage, aes(x = Happiness.score, y = Perceptions.of.corruption)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, col = "#269B47") +
+  labs(title = "Happiness Score vs Perception of Corruption", x = "Happiness Score", y = "Perception of Corruption") +
+  theme_minimal()
+
+ggplotly(lg_6)
+```
+
+By this linear reggresion, we can see that Happiness Score and Perception of Corruption have negative correlation. It means that, the lower Perception of Corruption, the higher Happiness Score in that country.
+
+# BOXPLOT OF HAPPINESS SCORE BASED ON REGIONAL
+
+```{r}
+box_plot <- ggplot(df_percentage, aes(x = Regional.indicator,y = Happiness.score)) +
+  geom_boxplot(fill = "#56AD6A") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Boxplot of Happiness per Regional", x = "Regional", y = "Happiness Score")
+
+ggplotly(box_plot)
+```
+
+In this box plot, we can see that Western Europe and North America and ANZ have the highest median happiness scores.Beside of that, South Asia has the lowest median happiness score. Also, we can see that North America and ANZ, as well as Sub-Saharan Africa, exhibit the highest variability in happiness scores, while East Asia and Central and Eastern Europe show the least variability.
+
+# INTERACTIVE MAPS HAPPINESS SCORE
+
+```{r}
+maps_happiness <- plot_ly(
+  df_percentage, 
+  type = "choropleth", 
+  locations = ~Country.name, 
+  locationmode = 'country names',
+  z = ~Happiness.score, 
+  text = ~paste(Country.name, '<br>Region:', Regional.indicator, '<br>Happiness Score:', Happiness.score),
+  hoverinfo = "text",
+  colorscale = 'Viridis',
+  marker = list(line = list(color = 'white', width = 0.5)),
+  colorbar = list(title = 'Happiness Score')
+)
+
+maps_happiness <- maps_happiness %>% layout(
+  title = "World Happiness Report 2021",
+  geo = list(showframe = FALSE, showcoastlines = FALSE, projection = list(type = 'equirectangular'))
+)
+
+maps_happiness
+```
+
+In this Happiness Score maps, we can observe a global happiness map where countries are color-coded: yellow indicates the happiest countries, while deep blue represents the saddest ones.We can see that Finland is the happiest country in the world and Afghanistan is the saddest country in the world.
+
+# INTERACTIVE MAPS LIFE EXPECTANCY
+
+```{r}
+maps_life <- plot_ly(
+  df_percentage, 
+  type = "choropleth", 
+  locations = ~Country.name, 
+  locationmode = 'country names',
+  z = ~Life.expectancy, 
+  text = ~paste(Country.name, '<br>Region:', Regional.indicator, '<br>Life Expectancy:', Life.expectancy),
+  hoverinfo = "text",
+  colorscale = 'YlGnBu',
+  marker = list(line = list(color = 'white', width = 0.5)),
+  colorbar = list(title = 'Life Expectancy')
+)
+
+maps_life <- maps_life %>% layout(
+  title = "World Life Expectancy Report 2021",
+  geo = list(showframe = FALSE, showcoastlines = FALSE, projection = list(type = 'equirectangular'))
+)
+
+maps_life
+```
+
+In this Life Expectancy maps, we can observe a global life expectancy map where countries are color-coded: yellow pastel indicates the highest life expectancy countries, while deep blue represents the lowest ones.We can see that Australia has the highest life expectancy in the world and Chad has the lowest life expectancy in the world.

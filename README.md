@@ -34,12 +34,15 @@ The dataset includes:
 ### 📊 Key Analysis & Visualizations
 
 * **Missing Data Visualization**
+  
   Used `naniar::gg_miss_upset()` to display missing data patterns.
 
 * **Distribution by Continent**
+
   Boxplots comparing Happiness Scores across continents.
 
 * **Scatterplots**
+
   Analyzing the relationship between:
 
   * GDP vs Happiness
@@ -48,15 +51,19 @@ The dataset includes:
   * Healthy Life Expectancy vs Happiness
 
 * **Color-coded Density Plots**
+
   Highlighting how factors differ by region.
 
 * **Interactive Maps**
+
   Dynamic maps visualizing Happiness Score and Life Expectancy by country using geographic coordinates.
 
 * **Top 10 & Bottom 10 Countries**
+
   Identified based on Happiness Score.
 
 * **Correlation Matrix Heatmap**
+
   To detect strong predictors of happiness.
 
 ---
@@ -75,13 +82,6 @@ The dataset includes:
 * **North American and Western European countries** ranked highest in overall happiness.
 
 * **Sub-Saharan Africa and South Asia** had the lowest scores, mostly influenced by low GDP and weaker social support systems.
-
----
-
-### 🛠️ Tools & Libraries Used
-
-* **R and RMarkdown**
-* `dplyr`, `tidyr`, `ggplot2`, `naniar`, `corrplot`, `gridExtra`, `readxl`, `stringr`, `ggthemes`, and others.
 
 ---
 
